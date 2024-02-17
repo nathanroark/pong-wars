@@ -2,7 +2,7 @@ export const siteConfig = {
 	name: 'Pong Wars',
 	url: 'https://pong-wars.nathanroark.dev',
 	ogImage: 'https://pong-wars.nathanroark.dev/og.png',
-	description: 'Pong Wars built in Svelte.',
+	description: 'Pong Wars built with Svelte.',
 	links: {
 		twitter: 'https://twitter.com/nathanroark',
 		github: 'https://github.com/nathanroark/pong-wars',
