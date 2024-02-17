@@ -1,31 +1,32 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { Button } from '@/components/ui/button';
 
 	let canvas: HTMLCanvasElement;
 	let ctx: CanvasRenderingContext2D;
-	const SQUARE_SIZE = 25;
-	const MIN_SPEED = 5;
-	const MAX_SPEED = 10;
-	let dayScore = 0,
-		nightScore = 0;
-
+	const SQUARE_SIZE = 20;
+	const MIN_SPEED = 4;
+	const MAX_SPEED = 8;
+	let dayScore = 0;
+	let nightScore = 0;
+	let animationFrameId: number;
+	let isPlaying = true; // Control play/pause state
 	const colorPalette = {
 		ArcticPowder: '#F1F6F4',
 		MysticMint: '#D9E8E3',
-		WinterGrey: '#A2A2A1',
+		WinterGrey: '#b2b2b1',
 		Forsythia: '#FFC801',
 		DeepSaffron: '#FF9932',
-		// NocturnalExpedition: '#114C5A',
 		OceanicNoir: '#172B36',
-		Svelte: '#ea580c',
-		SvelteLight: '#FF6A00',
-		Black: '#000000'
+		Svelte: '#EB4F27',
+		Black: '#080808'
 	};
 
 	const DAY_COLOR = colorPalette.WinterGrey;
 	const DAY_BALL_COLOR = colorPalette.Black;
 	const NIGHT_COLOR = colorPalette.Black;
 	const NIGHT_BALL_COLOR = colorPalette.WinterGrey;
+
 	let balls: {
 		x: number;
 		y: number;
@@ -39,7 +40,7 @@
 	onMount(() => {
 		ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
 		initGame();
-		requestAnimationFrame(draw);
+		play();
 	});
 
 	function initGame() {
@@ -86,7 +87,7 @@
 			ball.y += ball.dy;
 		});
 
-		requestAnimationFrame(draw);
+		animationFrameId = requestAnimationFrame(draw);
 	}
 
 	function drawSquares() {
@@ -115,9 +116,9 @@
 	function checkSquareCollision(ball: {
 		x: number;
 		y: number;
-		reverseColor: string;
 		dx: number;
 		dy: number;
+		reverseColor: string;
 	}) {
 		for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 4) {
 			const checkX = ball.x + Math.cos(angle) * (SQUARE_SIZE / 2);
@@ -128,11 +129,27 @@
 			if (i >= 0 && i < squares.length && j >= 0 && j < squares[i].length) {
 				if (squares[i][j] !== ball.reverseColor) {
 					squares[i][j] = ball.reverseColor;
+
+					// Introduce randomness to the reflection angle
+					const reflectionAngle = (Math.random() * Math.PI) / 4 - Math.PI / 8; // Random angle between -22.5 to 22.5 degrees
+					let speed = Math.sqrt(ball.dx * ball.dx + ball.dy * ball.dy);
+
+					// Determine the general direction of reflection
 					if (Math.abs(Math.cos(angle)) > Math.abs(Math.sin(angle))) {
 						ball.dx = -ball.dx;
 					} else {
 						ball.dy = -ball.dy;
 					}
+
+					// Adjust the ball's direction with the randomized reflection angle
+					const newAngle = Math.atan2(ball.dy, ball.dx) + reflectionAngle;
+					ball.dx = speed * Math.cos(newAngle);
+					ball.dy = speed * Math.sin(newAngle);
+
+					// Ensure the speed stays within predefined limits
+					speed = Math.max(MIN_SPEED, Math.min(MAX_SPEED, speed));
+					ball.dx = speed * (ball.dx / Math.sqrt(ball.dx * ball.dx + ball.dy * ball.dy));
+					ball.dy = speed * (ball.dy / Math.sqrt(ball.dx * ball.dx + ball.dy * ball.dy));
 				}
 			}
 		}
@@ -155,16 +172,37 @@
 		if (Math.abs(ball.dx) < MIN_SPEED) ball.dx = ball.dx > 0 ? MIN_SPEED : -MIN_SPEED;
 		if (Math.abs(ball.dy) < MIN_SPEED) ball.dy = ball.dy > 0 ? MIN_SPEED : -MIN_SPEED;
 	}
+
+	function play() {
+		if (isPlaying) {
+			draw();
+		}
+	}
+	function togglePlayPause() {
+		isPlaying = !isPlaying;
+		if (isPlaying) {
+			play();
+		} else {
+			cancelAnimationFrame(animationFrameId);
+		}
+	}
+
+	function resetGame() {
+		initGame(); // Re-initialize the game state
+		if (!isPlaying) {
+			togglePlayPause(); // If the game was paused, resume it
+		}
+	}
 </script>
 
-<div class="flex h-screen items-center justify-center">
+<div class="flex items-center justify-center">
 	<div class="flex w-full max-w-4xl flex-col items-center px-4">
-		<canvas bind:this={canvas} width="600" height="400" class="border border-primary"></canvas>
+		<div class="space-x-6 p-4">
+			<Button variant="outline" on:click={togglePlayPause}>{isPlaying ? 'Pause' : 'Play'}</Button>
+			<Button variant="outline" on:click={resetGame}>Reset</Button>
+		</div>
+		<canvas bind:this={canvas} width="600" height="400" class="border-primaray border"></canvas>
 		<div class="mt-4 font-mono text-lg">Day {dayScore} | Night {nightScore}</div>
-		<p class="mt-2 text-center font-mono text-sm">
-			Pong Wars in <a href="https://svelte.dev/" class="text-orange-500">Svelte</a> | Source on
-			<a href="https://github.com/nathanroark/pong-wars" class="text-orange-500">GitHub</a>
-		</p>
 	</div>
 </div>
 
